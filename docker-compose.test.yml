@@ -3,7 +3,12 @@
 #
 # Osobny `name:` daje osobny projekt Compose (własna sieć i własne nazwy kontenerów),
 # więc ten stack może chodzić równolegle z produkcyjnym docker-compose.yml.
-# Żadna usługa nie publikuje portów na hosta — nie ma jak kolidować z produkcją.
+#
+# Jedyny port publikowany na hosta to panel: 127.0.0.1:${TEST_WEB_PORT:-8081} (produkcja
+# używa 8080, więc nie ma kolizji). Broker i atrapy zostają w sieci wewnętrznej.
+#
+# UWAGA: webapp używa stałego identyfikatora klienta MQTT `gniazdka-webapp`, więc panel
+# testowy i produkcyjny NIE mogą chodzić jednocześnie — broker rozłączałby je na przemian.
 #
 #   docker compose -f docker-compose.test.yml up -d --build --wait
 #   docker compose -f docker-compose.test.yml run --rm tests pytest -m integration
@@ -110,6 +115,41 @@ services:
       fake-3:
         condition: service_healthy
 
+  # Panel podłączony do TESTOWEGO brokera — ten sam obraz i ten sam kod co w produkcji,
+  # tylko z atrapami w tle. Dzięki temu testy integracyjne obejmują pełną drogę
+  # przeglądarka -> REST -> MQTT -> most -> atrapa i powrót przez polling.
+  webapp:
+    build: ./webapp
+    container_name: gniazdka-test-webapp
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      HOMIE_PREFIX: ${HOMIE_PREFIX:-homie}
+      DB_PATH: /data/gniazdka.db
+      WEB_PORT: 8080
+    volumes:
+      # Kod na żywo (jak w produkcji), ale baza harmonogramów w tmpfs-ie: testy mają
+      # startować z pustą tabelą i nie zostawiać nic w ./data w repozytorium.
+      - ./webapp/app:/app/app
+    tmpfs:
+      # Twardy warunek startu webappa: DB_PATH musi być w zapisywalnym katalogu.
+      - /data
+    ports:
+      - "127.0.0.1:${TEST_WEB_PORT:-8081}:8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python3 -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/api/health',timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
   # Nazwa `tests` jest kontraktem ze strumieniem A:
   #   docker compose -f docker-compose.test.yml run --rm tests pytest -m integration
   # Świadomie bez depends_on — usługa ma dać się uruchomić także wtedy, gdy chcemy
@@ -132,6 +172,9 @@ services:
       MQTT_PORT: 1883
       HOMIE_PREFIX: ${HOMIE_PREFIX:-homie}
       FAKE_DEVICE_KEY: ${FAKE_DEVICE_KEY:-testkey123}
+      # Panel widziany z sieci Compose — testy integracyjne gadają z nim po HTTP,
+      # przez prawdziwego uvicorna, a nie przez TestClient Starlette.
+      WEBAPP_URL: http://webapp:8080
       PYTHONDONTWRITEBYTECODE: "1"
       # Bez .pytest_cache w zamontowanym repozytorium (kontener chodzi jako root).
       PYTEST_ADDOPTS: -p no:cacheprovider
