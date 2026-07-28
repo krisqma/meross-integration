@@ -1,0 +1,38 @@
+# ACL brokera — PLIK NIEAKTYWNY.
+#
+# Żaden listener go teraz nie używa: w mosquitto.conf `acl_file` występuje wyłącznie
+# w zakomentowanym bloku listenera TLS 8883. Na listenerze 1883 ACL-a świadomie nie ma, bo
+# healthcheck Compose'a subskrybuje anonimowo `$SYS/broker/uptime`, a każda reguła zamykająca
+# anonimowych zatrzymałaby cały stack (`bridge` i `webapp` czekają na `service_healthy`).
+#
+# Plik ma być poprawny i gotowy, żeby włączenie TLS było jedną zmianą w mosquitto.conf.
+# Wymaga `per_listener_settings true` — inaczej te reguły objęłyby także listener 1883.
+#
+# Reguły są sprawdzone na eclipse-mosquitto 2.1.2: klient uprawniony widzi retained
+# `homie/#`, a anonimowy przy tym samym ACL-u nie dostaje z tego drzewa nic.
+#
+# Przy włączaniu TLS zrób `chmod 0700 mosquitto/config/acl` — mosquitto 2.1 ostrzega, że
+# plik jest world-readable, i przyszłe wersje odmówią jego wczytania. Git pamięta tylko bit
+# wykonywalności, więc po `git clone` uprawnienia trzeba ustawić ponownie.
+#
+# Składnia: linie `topic` przed jakimkolwiek `user` dotyczą klientów ANONIMOWYCH,
+# czyli u nas gniazdek Meross na listenerze TLS.
+
+# --- Anonimowi = gniazdka Meross ---
+# Gniazdka rozmawiają tylko pod własnym prefiksem: publikują na /appliance/<uuid>/publish,
+# subskrybują /appliance/<uuid>/subscribe, a most odpowiada im pod
+# /appliance/m2h-<meross_bridge_topic>/... — wszystko mieści się w tym drzewie.
+topic readwrite /appliance/#
+
+# Wszystko poza powyższym jest domyślnie zabronione, więc gniazdko NIE widzi `homie/#`
+# (stan i sterowanie panelu) ani `$SYS/#`. To właśnie ta izolacja, którą dawałby osobny
+# broker. Nie dopisuj tu `topic readwrite homie/#` ani `topic read $SYS/#`.
+
+# --- Most (opcjonalnie, gdyby kiedyś łączył się po TLS z loginem) ---
+# Dopóki most siedzi na listenerze 1883, tych reguł nie potrzebuje. Gdyby przenieść go na
+# 8883 z uwierzytelnianiem (`mqtt_username`/`mqtt_password` w config.yml mostu
+# i `password_file` w bloku listenera), odkomentuj:
+#user bridge
+#topic readwrite homie/#
+#topic readwrite /appliance/#
+#topic read $SYS/#

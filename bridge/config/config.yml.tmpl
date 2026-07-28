@@ -1,0 +1,63 @@
+# SZABLON konfiguracji mostu meross2mqtt.
+#
+# Nie edytuj wygenerowanego bridge/config/config.yml — powstaje z tego pliku przy każdym
+# `./dot.sh up` (albo `./dot.sh render-config`) i zostanie nadpisany. Znaczniki
+# w podwójnych klamrach podstawia dot.sh wartościami ze zmiennych z .env.
+#
+# Obraz mostu ma `WORKDIR /config`, a `CONFIG.load()` bez argumentu czyta ./config.yml,
+# więc wynik MUSI wylądować w bridge/config/config.yml (montowane jako /config, zapisywalnie).
+
+# Poziom logów: TRACE | DEBUG | INFO | WARNING | ERROR
+log_level: {{LOG_LEVEL}}
+
+# --- Broker MQTT (z .env: MQTT_HOST, MQTT_PORT) ---
+mqtt_host: "{{MQTT_HOST}}"
+mqtt_port: {{MQTT_PORT}}
+# W repo domyślnie false, ale README zaleca true, a przy aiomqtt 2.x sesja zostawiona
+# przez poprzedni start mostu potrafi kolidować z nowym połączeniem (te same subskrypcje,
+# zaległe wiadomości). Most i tak odtwarza stan z devices.json, więc trwała sesja nic nie wnosi.
+mqtt_clean_session: true
+
+# --- Protokół Meross ---
+# Kluczowe dla naszego wariantu: most rozmawia z gniazdkami bezpośrednio po HTTP
+# (POST /config w LAN-ie), dzięki czemu gniazdka nie muszą się nigdy logować do naszego
+# brokera i zostają sparowane z chmurą Meross (aplikacja Meross dalej działa).
+enable_http: true
+
+# Klucz protokołu Meross z chmury (.env: MEROSS_KEY, wypełnia `./dot.sh login`).
+# Bez niego gniazdka odpowiadają "5001 sign error".
+meross_key: "{{MEROSS_KEY}}"
+
+# Prefiks tematów Meross. Zostaje domyślny — nie przemapowujemy prefiksów, bo nie mamy
+# drugiego brokera (uzasadnienie w mosquitto/config/mosquitto.conf).
+meross_prefix: "/appliance"
+
+# --- Homie ---
+# Musi być identyczny jak HOMIE_PREFIX w webappie (CONTRACT.md §7).
+homie_prefix: "{{HOMIE_PREFIX}}"
+
+# --- Most ---
+# Ścieżka relatywna względem WORKDIR /config, czyli bridge/config/devices.json na hoście.
+# Tu most pamięta UUID-y i adresy IP gniazdek; ten sam plik uzupełnia `./dot.sh discover`.
+persistence_file: "devices.json"
+
+# Odpytywanie stanu (w sekundach). Domyślne 10 s to dużo ruchu, bo każdy cykl to także
+# odczyt zużycia energii z trzech gniazdek; 20-30 s w pełni wystarcza dla panelu.
+polling_interval: {{POLLING_INTERVAL}}
+
+# Ta opcja "restartuje" gniazdko, wysyłając mu na /config celowo niepoprawne dane.
+# Zostaje wyłączona — nie chcemy, żeby chwilowy timeout w LAN-ie przeładowywał sprzęt.
+try_reboot_on_timeout: false
+
+# --- Urządzenia (opcjonalnie) ---
+# CONTRACT.md §2.1: NIE ustawiaj `pretty_topic`. Prefiks tematu Homie ma zostać UUID-em,
+# bo webapp rozpoznaje urządzenia po tym, co zobaczy w `homie/+/$state`. Czytelna nazwa
+# idzie wyłącznie przez `pretty_name` (trafia do `$name`).
+# UUID-y trzech gniazdek z CONTRACT.md §9 — odkomentuj i nazwij po swojemu:
+#devices:
+#  "2103163085044890845648e1e962e3a6":
+#    pretty_name: "Gniazdko 1"
+#  "2101157387887490839348e1e945c257":
+#    pretty_name: "Gniazdko 2"
+#  "2101070928400790839048e1e944b53f":
+#    pretty_name: "Gniazdko 3"
