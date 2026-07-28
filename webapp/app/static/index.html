@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Gniazdka — panel sterowania</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <h1>Gniazdka</h1>
+        <span class="muted">panel lokalny</span>
+      </div>
+      <span id="connection" class="badge badge-warn">Łączenie…</span>
+    </header>
+
+    <main>
+      <section>
+        <div class="section-title">
+          <h2>Urządzenia</h2>
+          <span id="devices-summary" class="muted"></span>
+        </div>
+        <!-- Kafelki wstawia app.js; jeden kafelek na urządzenie, w nim jeden blok na kanał. -->
+        <div id="devices" class="grid"></div>
+      </section>
+
+      <!-- Kontener modułu harmonogramów (CONTRACT.md §6) — schedules.js montuje się tutaj
+           i nie dotyka reszty DOM-u. -->
+      <section id="schedules" class="card"></section>
+    </main>
+
+    <script type="module" src="/static/app.js"></script>
+    <script type="module" src="/static/schedules.js"></script>
+  </body>
+</html>
