@@ -1,0 +1,64 @@
+# Stack lokalny: broker MQTT + most meross2mqtt + panel webowy.
+# Wszystkie obrazy są multi-arch (arm64/amd64) — ten sam plik działa na Macu i na Raspberry Pi.
+# Zmienne pochodzą z pliku .env (patrz .env.example); wartości po ":-" to fallbacki,
+# dzięki którym `docker compose config` działa nawet bez .env.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: gniazdka-mosquitto
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    ports:
+      # Celowo tylko loopback: broker nie ma uwierzytelniania i nie ma być widoczny z LAN-u.
+      - "127.0.0.1:1883:1883"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mosquitto_sub -h 127.0.0.1 -p 1883 -t '$$SYS/broker/uptime' -C 1 -W 3 -q 1 >/dev/null 2>&1 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  bridge:
+    # meross2mqtt/Dockerfile używa `RUN --mount`, więc build wymaga BuildKita
+    # (domyślny w Dockerze >= 23; dla starszych: DOCKER_BUILDKIT=1).
+    build: ./meross2mqtt
+    container_name: gniazdka-bridge
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+    volumes:
+      # Zapisywalne: most trzyma tu devices.json obok config.yml.
+      - ./bridge/config:/config
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
+  webapp:
+    build: ./webapp
+    container_name: gniazdka-webapp
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+      MQTT_HOST: ${MQTT_HOST:-mosquitto}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      HOMIE_PREFIX: ${HOMIE_PREFIX:-homie}
+      DB_PATH: ${DB_PATH:-/data/gniazdka.db}
+      WEB_PORT: ${WEB_PORT:-8080}
+    volumes:
+      # Kod montowany na żywo, żeby w dev wystarczył restart kontenera zamiast przebudowy.
+      - ./webapp/app:/app/app
+      - ./data:/data
+    ports:
+      # Na wszystkich interfejsach — panel ma być dostępny z LAN-u.
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      mosquitto:
+        condition: service_healthy

@@ -1,0 +1,24 @@
+# Zagnieżdżony klon mostu — trzymany osobno, żeby dało się robić `git pull`.
+# Celowo NIE jest submodułem. Na nowej maszynie doklonuj go ręcznie albo przez ./dot.sh.
+meross2mqtt/
+
+# Sekrety i pliki generowane w runtime
+.env
+bridge/config/config.yml
+bridge/config/devices.json
+
+# Dane runtime — ignorujemy zawartość, ale zostawiamy same katalogi w repo.
+# Inaczej po `git clone` Docker tworzyłby je sam jako root i mosquitto nie miałby
+# gdzie zapisać persystencji ani logów.
+data/*
+!data/.gitkeep
+mosquitto/data/*
+!mosquitto/data/.gitkeep
+mosquitto/log/*
+!mosquitto/log/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
