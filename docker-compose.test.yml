@@ -1,0 +1,141 @@
+# Stack testowy: broker + trzy atrapy gniazdek + PRAWDZIWY most + kontener z testami.
+# Zero sprzętu, zero chmury, zero klucza Meross — atrapy używają klucza FAKE_DEVICE_KEY.
+#
+# Osobny `name:` daje osobny projekt Compose (własna sieć i własne nazwy kontenerów),
+# więc ten stack może chodzić równolegle z produkcyjnym docker-compose.yml.
+# Żadna usługa nie publikuje portów na hosta — nie ma jak kolidować z produkcją.
+#
+#   docker compose -f docker-compose.test.yml up -d --build --wait
+#   docker compose -f docker-compose.test.yml run --rm tests pytest -m integration
+#   docker compose -f docker-compose.test.yml down -v
+#
+name: gniazdka-test
+
+# Trzy atrapy budują się z tego samego Dockerfile'a (drugi i trzeci build to trafienie
+# w cache). Świadomie bez wspólnego `image:` — równoległy build trzech usług do jednego
+# taga kończy się błędem "image already exists".
+x-fake-common: &fake-common
+  build:
+    context: ./tests/fakes
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  environment:
+    TZ: ${TZ:-Europe/Warsaw}
+    FAKE_DEVICE_KEY: ${FAKE_DEVICE_KEY:-testkey123}
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: gniazdka-test-mosquitto
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+    volumes:
+      - ./tests/fakes/mosquitto-test.conf:/mosquitto/config/mosquitto.conf:ro
+    tmpfs:
+      - /mosquitto/data
+      - /mosquitto/log
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mosquitto_sub -h 127.0.0.1 -p 1883 -t '$$SYS/broker/uptime' -C 1 -W 3 -q 1 >/dev/null 2>&1 || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 3s
+
+  # UUID-y i MAC-i są takie same jak w CONTRACT.md §9, żeby testy odpowiadały temu,
+  # co stoi w domu. --inner-ip to nazwa usługi: most po interview przechodzi na wartość
+  # z all.system.firmware.innerIp, więc musi być rozwiązywalna w sieci Compose.
+  fake-1:
+    <<: *fake-common
+    container_name: gniazdka-test-fake-1
+    command:
+      - --uuid=2103163085044890845648e1e962e3a6
+      - --mac=48:e1:e9:62:e3:a6
+      - --type=mss310
+      - --channels=1
+      - --inner-ip=fake-1
+
+  fake-2:
+    <<: *fake-common
+    container_name: gniazdka-test-fake-2
+    command:
+      - --uuid=2101157387887490839348e1e945c257
+      - --mac=48:e1:e9:45:c2:57
+      - --type=mss310
+      - --channels=1
+      - --inner-ip=fake-2
+
+  # Listwa 4-kanałowa: sprawdza, czy most buduje węzły switch-1..switch-3.
+  fake-3:
+    <<: *fake-common
+    container_name: gniazdka-test-fake-3
+    command:
+      - --uuid=2101070928400790839048e1e944b53f
+      - --mac=48:e1:e9:44:b5:3f
+      - --type=mss425e
+      - --channels=4
+      - --inner-ip=fake-3
+
+  bridge:
+    build: ./meross2mqtt
+    container_name: gniazdka-test-bridge
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+      FAKE_DEVICE_KEY: ${FAKE_DEVICE_KEY:-testkey123}
+    volumes:
+      # Zalążek konfiguracji tylko do odczytu. Most zapisuje do /config (devices.json),
+      # więc entrypoint kopiuje zalążek do tmpfs-a i tam pracuje — repo zostaje czyste.
+      - ./tests/fakes/bridge-config:/config-seed:ro
+    tmpfs:
+      - /config
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        cp /config-seed/config.yml /config/config.yml
+        cp /config-seed/devices.json /config/devices.json
+        sed -i "s|^meross_key:.*|meross_key: \"${FAKE_DEVICE_KEY:-testkey123}\"|" /config/config.yml
+        exec python3 -m meross2homie /config/config.yml
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      fake-1:
+        condition: service_healthy
+      fake-2:
+        condition: service_healthy
+      fake-3:
+        condition: service_healthy
+
+  # Nazwa `tests` jest kontraktem ze strumieniem A:
+  #   docker compose -f docker-compose.test.yml run --rm tests pytest -m integration
+  # Świadomie bez depends_on — usługa ma dać się uruchomić także wtedy, gdy chcemy
+  # odpalić same testy jednostkowe, bez podnoszenia brokera, mostu i atrap.
+  # `replicas: 0` sprawia, że `up` jej nie startuje (inaczej `up --wait` czekałby na
+  # wynik pytesta odpalonego, zanim stack w ogóle wstanie), ale `build` i `run` działają
+  # normalnie — inaczej niż przy `profiles`, gdzie zwykły `build` pomija usługę.
+  tests:
+    deploy:
+      replicas: 0
+    build:
+      # Kontekst to katalog główny: obraz instaluje tests/requirements-dev.txt
+      # oraz webapp/requirements.txt.
+      context: .
+      dockerfile: tests/fakes/Dockerfile.tests
+    image: gniazdka-test-runner
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      HOMIE_PREFIX: ${HOMIE_PREFIX:-homie}
+      FAKE_DEVICE_KEY: ${FAKE_DEVICE_KEY:-testkey123}
+      PYTHONDONTWRITEBYTECODE: "1"
+      # Bez .pytest_cache w zamontowanym repozytorium (kontener chodzi jako root).
+      PYTEST_ADDOPTS: -p no:cacheprovider
+    volumes:
+      - .:/work
+    working_dir: /work
+    command: ["pytest"]

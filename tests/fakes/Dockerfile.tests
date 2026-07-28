@@ -1,0 +1,20 @@
+# Obraz do uruchamiania testów. Kontekst budowania: katalog główny repozytorium
+# (potrzebne są dwa pliki zależności), a samo repo montujemy potem w /work.
+#
+#   docker compose -f docker-compose.test.yml build tests
+#
+FROM python:3.12-slim
+
+COPY tests/requirements-dev.txt /tmp/requirements-dev.txt
+# Testy webappa importują fastapi i APScheduler, więc obraz musi mieć też jego zależności.
+COPY webapp/requirements.txt /tmp/requirements-web.txt
+
+RUN pip install --no-cache-dir -r /tmp/requirements-dev.txt -r /tmp/requirements-web.txt \
+    && rm -f /tmp/requirements-dev.txt /tmp/requirements-web.txt
+
+# Repozytorium jest montowane tutaj przez docker-compose.test.yml (wolumen .:/work),
+# dzięki czemu zmiana testu nie wymaga przebudowy obrazu.
+WORKDIR /work
+
+ENTRYPOINT []
+CMD ["pytest"]

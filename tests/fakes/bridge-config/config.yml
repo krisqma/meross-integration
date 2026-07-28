@@ -1,0 +1,45 @@
+# Konfiguracja mostu dla stacku testowego (docker-compose.test.yml).
+# UWAGA: to tylko ZALĄŻEK — katalog jest montowany read-only jako /config-seed,
+# a entrypoint kopiuje go do zapisywalnego /config (tmpfs). Most dopisuje do
+# devices.json, więc montowanie tego katalogu wprost brudziłoby repozytorium.
+#
+# Do produkcji służy bridge/config/config.yml.tmpl ze strumienia A — ten plik jest osobny
+# celowo, żeby testy nie zależały od pliku pisanego równolegle przez inny strumień.
+
+log_level: DEBUG
+
+mqtt_host: mosquitto
+mqtt_port: 1883
+mqtt_clean_session: true
+
+# Atrapy nie łączą się z brokerem — most rozmawia z nimi wyłącznie po HTTP,
+# na podstawie adresów zapamiętanych w devices.json.
+enable_http: true
+
+# Musi być równe FAKE_DEVICE_KEY z .env.example. Entrypoint mostu w docker-compose.test.yml
+# nadpisuje tę linię wartością FAKE_DEVICE_KEY, jeśli w .env ustawiono inną.
+meross_key: "testkey123"
+
+homie_prefix: homie
+
+# UWAGA: `persistence_file` celowo NIE jest tu ustawiony. Zainstalowana wersja
+# yamldataclassconfig waliduje typy i odrzuca łańcuch znaków w polu typu Path:
+#   ConfigValidationError: Field 'persistence_file' expected Path, got str
+# Domyślna wartość to `devices.json` względem katalogu roboczego, a ten w obrazie
+# mostu to /config — czyli dokładnie /config/devices.json.
+
+# Krótki cykl pollingu: testy integracyjne czekają na powrót stanu po przełączeniu.
+# Produkcja (strumień A) używa 20–30 s zgodnie z kontraktem §8.
+polling_interval: 5
+command_timeout: 5
+interview_command_timeout: 10
+interview_retry_times: 5
+try_reboot_on_timeout: false
+
+devices:
+  "2103163085044890845648e1e962e3a6":
+    pretty_name: "Atrapa 1 (mss310)"
+  "2101157387887490839348e1e945c257":
+    pretty_name: "Atrapa 2 (mss310)"
+  "2101070928400790839048e1e944b53f":
+    pretty_name: "Atrapa 3 (listwa 4-kanałowa)"
