@@ -442,11 +442,14 @@ cmd_test() {
             dct run --rm tests pytest "$@"
             ;;
         int)
-            info "Podnoszę stack testowy."
+            info "Podnoszę stack testowy (broker, atrapy gniazdek, prawdziwy most)."
+            # --build, bo atrapy budują się z tests/fakes i muszą łapać zmiany w kodzie.
+            # --wait czeka na healthchecki, żeby pytest nie startował do pustego brokera;
+            # usługa `tests` ma replicas: 0, więc `up` jej nie odpala.
             local up_args
-            up_args="-d"
+            up_args="-d --build"
             if dct up --help 2>/dev/null | grep -q -- '--wait'; then
-                up_args="-d --wait"
+                up_args="-d --build --wait"
             fi
             # shellcheck disable=SC2086  # up_args ma się rozdzielić na osobne słowa
             dct up $up_args
