@@ -154,8 +154,11 @@ def test_render_utrzymuje_decyzje_z_planu(tmp_path):
     assert data["enable_http"] is True
     assert data["try_reboot_on_timeout"] is False
     assert 20 <= data["polling_interval"] <= 30
-    # Ścieżka relatywna: obraz mostu ma WORKDIR /config, więc to /config/devices.json.
-    assert data["persistence_file"] == "devices.json"
+    # `persistence_file` MUSI zostać nieustawiony: yamldataclassconfig waliduje typy i
+    # odrzuca string w polu typu Path ("expected Path, got str"), a most wpada wtedy
+    # w pętlę restartów. Domyślne Path("devices.json") względem WORKDIR /config daje
+    # dokładnie to samo, czyli /config/devices.json.
+    assert "persistence_file" not in data
     assert data["log_level"] == "INFO"
     # CONTRACT.md §2.1: pretty_topic nigdzie nie może być aktywne, bo <dev> ma zostać UUID-em.
     assert "pretty_topic" not in yaml.safe_dump(data)

@@ -37,9 +37,13 @@ meross_prefix: "/appliance"
 homie_prefix: "{{HOMIE_PREFIX}}"
 
 # --- Most ---
-# Ścieżka relatywna względem WORKDIR /config, czyli bridge/config/devices.json na hoście.
-# Tu most pamięta UUID-y i adresy IP gniazdek; ten sam plik uzupełnia `./dot.sh discover`.
-persistence_file: "devices.json"
+# `persistence_file` celowo NIE jest tu ustawiony. Zainstalowana wersja yamldataclassconfig
+# waliduje typy i odrzuca łańcuch znaków w polu typu Path:
+#   ConfigValidationError: Field 'persistence_file' expected Path, got str
+# a most wpada w pętlę restartów. Domyślna wartość w meross2homie/config.py to
+# Path("devices.json") względem katalogu roboczego, a ten w obrazie mostu to /config —
+# czyli /config/devices.json, na hoście bridge/config/devices.json. Tam most pamięta
+# UUID-y i adresy IP gniazdek; ten sam plik uzupełnia `./dot.sh discover`.
 
 # Odpytywanie stanu (w sekundach). Domyślne 10 s to dużo ruchu, bo każdy cykl to także
 # odczyt zużycia energii z trzech gniazdek; 20-30 s w pełni wystarcza dla panelu.
