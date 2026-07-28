@@ -1,0 +1,10 @@
+{
+  "devices": {
+    "2103163085044890845648e1e962e3a6": {
+      "ip_address": "192.168.1.99"
+    },
+    "ffffffffffffffffffffffffffffffff": {
+      "ip_address": "192.168.1.200"
+    }
+  }
+}

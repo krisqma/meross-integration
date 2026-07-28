@@ -1,0 +1,19 @@
+{
+  "header": {
+    "messageId": "e81df8b8f014e3a7af26793a673fa798",
+    "namespace": "Appliance.System.All",
+    "method": "ERROR",
+    "payloadVersion": 1,
+    "from": "/appliance/2103163085044890845648e1e962e3a6/publish",
+    "uuid": "2103163085044890845648e1e962e3a6",
+    "timestamp": 1785267071,
+    "timestampMs": 593,
+    "sign": "d51cd90f9423f7115b01c514f13c18cb"
+  },
+  "payload": {
+    "error": {
+      "code": 5001,
+      "detail": "sign error"
+    }
+  }
+}

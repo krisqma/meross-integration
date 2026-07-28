@@ -1,0 +1,9 @@
+? (192.168.1.1) at 80:af:ca:7f:fe:64 [ether] on eth0
+? (192.168.1.4) at <incomplete> on eth0
+? (192.168.1.112) at d4:c9:ef:52:50:20 [ether] on eth0
+? (192.168.1.122) at 48:e1:e9:62:e3:a6 [ether] on eth0
+? (192.168.1.177) at 48:e1:e9:45:c2:57 [ether] on eth0
+? (192.168.1.240) at 48:e1:e9:44:b5:3f [ether] on wlan0
+? (192.168.1.250) at <incomplete> on eth0
+? (224.0.0.251) at 01:00:5e:00:00:fb [ether] on eth0
+? (192.168.1.255) at ff:ff:ff:ff:ff:ff [ether] PERM on eth0

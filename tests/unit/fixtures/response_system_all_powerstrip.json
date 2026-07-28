@@ -1,0 +1,57 @@
+{
+  "header": {
+    "messageId": "aa11bb22cc33dd44ee55ff6677889900",
+    "namespace": "Appliance.System.All",
+    "method": "GETACK",
+    "payloadVersion": 1,
+    "from": "/appliance/2101157387887490839348e1e945c257/publish",
+    "timestamp": 1785267090,
+    "timestampMs": 44,
+    "sign": "1b2c3d4e5f60718293a4b5c6d7e8f900"
+  },
+  "payload": {
+    "all": {
+      "system": {
+        "hardware": {
+          "type": "mss425e",
+          "subType": "eu",
+          "version": "4.0.0",
+          "chipType": "mt7682",
+          "uuid": "2101157387887490839348e1e945c257",
+          "macAddress": "48:E1:E9:45:C2:57"
+        },
+        "firmware": {
+          "version": "4.1.9",
+          "innerIp": "192.168.1.177"
+        },
+        "online": {
+          "status": 1
+        }
+      },
+      "digest": {
+        "togglex": [
+          {
+            "channel": 0,
+            "onoff": 1,
+            "lmTime": 1785260001
+          },
+          {
+            "channel": 1,
+            "onoff": 0,
+            "lmTime": 1785260002
+          },
+          {
+            "channel": 2,
+            "onoff": 0,
+            "lmTime": 1785260003
+          },
+          {
+            "channel": 3,
+            "onoff": 1,
+            "lmTime": 1785260004
+          }
+        ]
+      }
+    }
+  }
+}

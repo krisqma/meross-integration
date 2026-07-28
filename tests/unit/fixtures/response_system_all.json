@@ -1,0 +1,56 @@
+{
+  "header": {
+    "messageId": "3f10b25e0d1f4c4d9e2f0a7b1c8d9e01",
+    "namespace": "Appliance.System.All",
+    "method": "GETACK",
+    "payloadVersion": 1,
+    "from": "/appliance/2103163085044890845648e1e962e3a6/publish",
+    "uuid": "2103163085044890845648e1e962e3a6",
+    "timestamp": 1785267080,
+    "timestampMs": 121,
+    "sign": "7a0a1f5b1c2d3e4f5a6b7c8d9e0f1a2b"
+  },
+  "payload": {
+    "all": {
+      "system": {
+        "hardware": {
+          "type": "mss310",
+          "subType": "eu",
+          "version": "6.0.0",
+          "chipType": "rtl8710cm",
+          "uuid": "2103163085044890845648e1e962e3a6",
+          "macAddress": "48:e1:e9:62:e3:a6"
+        },
+        "firmware": {
+          "version": "6.1.9",
+          "compileTime": "2021/03/16 08:50:44",
+          "wifiMac": "80:af:ca:7f:fe:64",
+          "innerIp": "192.168.1.122",
+          "server": "mqtt-eu-3.meross.com",
+          "port": 443,
+          "userId": 12345678
+        },
+        "time": {
+          "timestamp": 1785267080,
+          "timezone": "Europe/Warsaw",
+          "timeRule": []
+        },
+        "online": {
+          "status": 1,
+          "who": 1
+        }
+      },
+      "digest": {
+        "togglex": [
+          {
+            "channel": 0,
+            "onoff": 1,
+            "lmTime": 1785260000
+          }
+        ],
+        "triggerx": [],
+        "timerx": []
+      }
+    }
+  }
+}

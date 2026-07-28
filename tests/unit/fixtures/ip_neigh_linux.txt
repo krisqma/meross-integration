@@ -1,0 +1,6 @@
+192.168.1.1 dev eth0 lladdr 80:af:ca:7f:fe:64 REACHABLE
+192.168.1.4 dev eth0  FAILED
+192.168.1.122 dev eth0 lladdr 48:e1:e9:62:e3:a6 STALE
+192.168.1.177 dev eth0 lladdr 48:e1:e9:45:c2:57 REACHABLE
+192.168.1.240 dev eth0 lladdr 48:e1:e9:44:b5:3f DELAY
+224.0.0.251 dev eth0 lladdr 01:00:5e:00:00:fb PERMANENT
