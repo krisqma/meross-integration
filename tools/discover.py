@@ -659,14 +659,19 @@ def subnet_hosts(subnet: str) -> List[str]:
     network = ipaddress.ip_network(subnet, strict=False)
     if network.version != 4:
         raise ValueError("obsługiwany jest tylko IPv4")
-    hosts = [str(host) for host in network.hosts()] if network.num_addresses > 2 else [str(network.network_address)]
-    if len(hosts) > MAX_SUBNET_HOSTS:
+
+    # Limit sprawdzamy Z LICZBY adresów, a nie z długości gotowej listy: /8 to 16,7 mln
+    # adresów, więc materializowanie ich po to, żeby zaraz odmówić, zjadałoby ponad
+    # gigabajt RAM-u i kilka sekund CPU (na Raspberry Pi wygląda to jak zawieszenie).
+    count = network.num_addresses - 2 if network.num_addresses > 2 else 1
+    if count > MAX_SUBNET_HOSTS:
         raise ValueError(
             "podsieć {0} ma {1} adresów, limit to {2} — podaj węższy zakres przez --subnet".format(
-                subnet, len(hosts), MAX_SUBNET_HOSTS
+                subnet, count, MAX_SUBNET_HOSTS
             )
         )
-    return hosts
+
+    return [str(host) for host in network.hosts()] if network.num_addresses > 2 else [str(network.network_address)]
 
 
 def order_candidates(entries: Sequence[ArpEntry]) -> List[ArpEntry]:

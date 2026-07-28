@@ -22,6 +22,7 @@ więc `sys.path` ustawiamy tutaj.
 import hashlib
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -425,8 +426,18 @@ def test_subnet_hosts_pojedynczy_adres():
 
 
 def test_subnet_hosts_odmawia_zbyt_szerokiego_zakresu():
-    with pytest.raises(ValueError):
+    """Odmowa musi być NATYCHMIASTOWA, a nie po wyliczeniu 16,7 mln adresów.
+
+    Limit liczymy z `num_addresses`, więc /8 odpada bez materializowania listy. Gdyby
+    ktoś wrócił do sprawdzania `len(hosts)`, ten test zacząłby trwać sekundy i zjadać
+    ponad gigabajt RAM-u — na Raspberry Pi nie do odróżnienia od zawieszenia.
+    """
+    started = time.monotonic()
+    with pytest.raises(ValueError) as excinfo:
         discover.subnet_hosts("10.0.0.0/8")
+    assert time.monotonic() - started < 0.5, "limit sprawdzany po zbudowaniu listy adresów"
+    assert "16777214" in str(excinfo.value)
+    assert str(discover.MAX_SUBNET_HOSTS) in str(excinfo.value)
 
 
 def test_subnet_hosts_odrzuca_bzdury():
