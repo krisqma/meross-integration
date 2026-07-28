@@ -6,6 +6,8 @@ meross2mqtt/
 .env
 bridge/config/config.yml
 bridge/config/devices.json
+# Nazwy urządzeń pobrane z chmury przez `./dot.sh login` — zawierają dane z konta.
+bridge/config/cloud-devices.json
 
 # Dane runtime — ignorujemy zawartość, ale zostawiamy same katalogi w repo.
 # Inaczej po `git clone` Docker tworzyłby je sam jako root i mosquitto nie miałby
