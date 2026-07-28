@@ -405,11 +405,24 @@ cmd_login() {
 
     info "Logowanie do chmury Meross w kontenerze mostu (tam jest meross_iot)."
     dim "    hasło nie jest nigdzie zapisywane — skrypt bierze tylko klucz"
+
+    # Kontener mostu chodzi jako root, a skrypt pisze do zamontowanego repozytorium:
+    # .env oraz bridge/config/cloud-devices.json. Na Linuksie (i na Raspberry Pi) oba
+    # pliki stałyby się własnością roota i późniejsze `./dot.sh up` nie mogłoby już
+    # nadpisać .env ani configu. Docker Desktop na macOS sam mapuje właściciela na
+    # użytkownika hosta, więc tam --user jest zbędne (i tylko psuje HOME w kontenerze).
+    local run_as=""
+    if [ "$(uname -s)" = "Linux" ]; then
+        run_as="--user $(id -u):$(id -g)"
+        dim "    uruchamiam jako $(id -u):$(id -g), żeby .env nie stał się własnością roota"
+    fi
+
     # --no-deps, żeby nie ciągnąć brokera; --entrypoint python3, bo obraz startuje
     # domyślnie samego mostu. Repo montujemy w /project, żeby skrypt widział .env
     # i bridge/config/ tak samo jak na hoście. `docker compose run` jest interaktywne
     # i samo przydziela TTY (odpowiednik `-it` z docker run); -T by to wyłączyło.
-    dc run --rm --no-deps --interactive \
+    # shellcheck disable=SC2086  # run_as ma się rozdzielić na dwa słowa albo zniknąć
+    dc run --rm --no-deps --interactive $run_as \
         --entrypoint python3 \
         -v "$ROOT_DIR:/project" \
         -w /project \
