@@ -175,6 +175,17 @@ services:
       # Panel widziany z sieci Compose — testy integracyjne gadają z nim po HTTP,
       # przez prawdziwego uvicorna, a nie przez TestClient Starlette.
       WEBAPP_URL: http://webapp:8080
+      # Testy sprzętowe (tests/hardware/, marker `hardware`) wychodzą z kontenera do LAN-u
+      # 192.168.1.0/24 — domyślna sieć Compose to potrafi (NAT przez hosta), więc nie ma
+      # tu network_mode: host (na macOS i tak nie działa). Klucz z chmury podajemy jawnie:
+      # bez tego kontener nie widziałby MEROSS_KEY z .env, bo `docker compose run` nie
+      # przekazuje środowiska hosta. HW_* przechodzą z powłoki użytkownika
+      # (HW_ALLOW_SWITCHING=1 ... ./dot.sh test hw) i domyślnie są puste, czyli test
+      # przełączający sam się pomija.
+      MEROSS_KEY: ${MEROSS_KEY:-}
+      HW_ALLOW_SWITCHING: ${HW_ALLOW_SWITCHING:-}
+      HW_TARGET_UUID: ${HW_TARGET_UUID:-}
+      HW_TARGET_CHANNEL: ${HW_TARGET_CHANNEL:-}
       PYTHONDONTWRITEBYTECODE: "1"
       # Bez .pytest_cache w zamontowanym repozytorium (kontener chodzi jako root).
       PYTEST_ADDOPTS: -p no:cacheprovider

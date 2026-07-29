@@ -471,7 +471,20 @@ cmd_test() {
             ;;
         hw)
             warn "Testy sprzętowe dotykają prawdziwych gniazdek w LAN-ie."
-            dct run --rm tests pytest -m hardware "$@"
+            if [ -z "$MEROSS_KEY" ]; then
+                warn "MEROSS_KEY jest pusty — przejdzie tylko test tożsamości, reszta się pominie."
+                warn "Klucz pobierzesz przez './dot.sh login'."
+            fi
+            if [ "${HW_ALLOW_SWITCHING:-}" = "1" ]; then
+                warn "HW_ALLOW_SWITCHING=1 — test przełączający JEST włączony dla"
+                warn "HW_TARGET_UUID=${HW_TARGET_UUID:-(nieustawione)} kanał ${HW_TARGET_CHANNEL:-0}."
+            else
+                dim "    test przełączający pominięty (bez HW_ALLOW_SWITCHING=1 nic nie kliknie)"
+            fi
+            # -s, bo te testy nie tylko sprawdzają, ale i RAPORTUJĄ (model gniazdka, liczba
+            # kanałów, zdolności kontra atrapa, odczyt mocy) — bez tego pytest zjada wydruki
+            # przy zielonym przebiegu. -r a pokazuje powody pominięć.
+            dct run --rm tests pytest -m hardware -s -r a "$@"
             ;;
     esac
 }
