@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import aiomqtt
 
@@ -40,6 +40,7 @@ class MqttHub:
         prefix: str = "homie",
         client_id: str = "gniazdka-webapp",
         reconnect_delay: float = RECONNECT_DELAY,
+        cloud_names: Optional[Dict[str, str]] = None,
     ) -> None:
         self.host = host
         self.port = port
@@ -47,7 +48,7 @@ class MqttHub:
         self.client_id = client_id
         self.reconnect_delay = reconnect_delay
         self.connected: bool = False
-        self._state = HomieState(prefix=prefix)
+        self._state = HomieState(prefix=prefix, cloud_names=cloud_names)
         self._client: Optional[aiomqtt.Client] = None
         self._task: Optional[asyncio.Task] = None
         self._stopping = False

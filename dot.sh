@@ -428,6 +428,12 @@ cmd_login() {
         -w /project \
         -e "MEROSS_API_URL=$MEROSS_API_URL" \
         bridge tools/meross_login.py "$@"
+
+    # Kopiuj cloud-devices.json do data/ — webapp (przez /data) odczyta nazwy z chmury
+    if [ -f "$ROOT_DIR/bridge/config/cloud-devices.json" ]; then
+        cp "$ROOT_DIR/bridge/config/cloud-devices.json" "$ROOT_DIR/data/cloud-devices.json"
+        info "Skopiowano cloud-devices.json do data/ dla webappa."
+    fi
 }
 
 cmd_test() {

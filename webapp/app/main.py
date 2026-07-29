@@ -12,7 +12,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -34,12 +34,25 @@ def _env(name: str, default: str) -> str:
     return value if value not in (None, "") else default
 
 
+def _load_cloud_names() -> Dict[str, str]:
+    cloud_path = Path("/data/cloud-devices.json")
+    if not cloud_path.is_file():
+        return {}
+    try:
+        data = json.loads(cloud_path.read_text())
+        return {uuid: info["name"] for uuid, info in data.get("devices", {}).items()}
+    except Exception:
+        log.warning("Nie udało się wczytać %s", cloud_path)
+        return {}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     hub = MqttHub(
         host=_env("MQTT_HOST", "mosquitto"),
         port=int(_env("MQTT_PORT", "1883")),
         prefix=_env("HOMIE_PREFIX", "homie"),
+        cloud_names=_load_cloud_names(),
     )
     app.state.hub = hub
     # Hub łączy się w tle: brak brokera przy starcie nie blokuje panelu.

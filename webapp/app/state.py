@@ -97,9 +97,10 @@ class Device:
 class HomieState:
     """Akumuluje stan z tematów Homie i wystawia go w kształcie z kontraktu."""
 
-    def __init__(self, prefix: str = "homie") -> None:
+    def __init__(self, prefix: str = "homie", cloud_names: Optional[Dict[str, str]] = None) -> None:
         self.prefix = prefix
         self.devices: Dict[str, Device] = {}
+        self._cloud_names: Dict[str, str] = cloud_names or {}
 
     # ------------------------------------------------------------------ wejście
 
@@ -216,7 +217,7 @@ class HomieState:
         attrs = device.attrs
         return {
             "id": dev_id,
-            "name": attrs.get("$name"),
+            "name": self._cloud_names.get(dev_id) or attrs.get("$name"),
             "state": attrs.get("$state"),
             "mac": attrs.get("$mac"),
             "ip": attrs.get("$localip"),
