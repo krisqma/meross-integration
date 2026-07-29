@@ -151,6 +151,7 @@ decyzja: panel siedzi w LAN-ie, broker tylko na loopbacku).
       "state": "ready",
       "mac": "48:e1:e9:62:e3:a6",
       "ip": "192.168.1.122",
+      "model": "mss310",
       "fw": "6.1.9",
       "channels": [
         {
@@ -170,7 +171,7 @@ decyzja: panel siedzi w LAN-ie, broker tylko na loopbacku).
 ```
 
 - `state` — dosłownie wartość z `$state` (`init`/`ready`/`lost`/`disconnected`/`sleeping`/`alert`).
-- `mac`, `ip`, `fw`, `name` — `null`, jeśli most jeszcze ich nie opublikował.
+- `mac`, `ip`, `model`, `fw`, `name` — `null`, jeśli most jeszcze ich nie opublikował.
 - `channels[]` — po jednym wpisie na węzeł `switch*`; `node` to nazwa węzła Homie
   (`switch`, `switch-1`, …), którą trzeba potem oddać w POST-ach.
 - **Pola pomiarowe (`power_w`, `voltage_v`, `current_a`, `energy_today_kwh`) są `null`, gdy

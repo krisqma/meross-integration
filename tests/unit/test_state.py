@@ -123,6 +123,7 @@ def test_pelny_kafelek_jednokanalowy_zgodny_z_kontraktem():
                 "state": "ready",
                 "mac": "48:e1:e9:62:e3:a6",
                 "ip": "192.168.1.122",
+                "model": "mss310",
                 "fw": "6.1.9",
                 "channels": [
                     {
@@ -237,6 +238,7 @@ def test_brak_atrybutow_urzadzenia_daje_none_a_nie_wyjatek():
     assert device["state"] is None
     assert device["mac"] is None
     assert device["ip"] is None
+    assert device["model"] is None
     assert device["fw"] is None
 
 

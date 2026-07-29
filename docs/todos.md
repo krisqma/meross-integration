@@ -65,3 +65,29 @@ wersjach mosquitto odmówi załadowania takiego pliku.
 **Revert**: Cofnięto — `user: "1883:1883"` w compose i `ensure_dirs` wróciły do oryginału.
 Warningi nie występują, bo bind mount jest czysty po `docker compose down && up`.
 Nazwy z chmury w webapp działają nadal (zmiany w `state.py`, `mqtt.py`, `main.py`, `cmd_login` nietknięte).
+
+---
+
+## 2026-07-29 23:10
+
+### Wyświetlanie modelu urządzenia na kafelku
+
+**Problem**: Kafelek pokazywał tylko IP, MAC i firmware w jednej linii. Brakowało
+informacji o modelu (np. "mss310", "mss210").
+
+**Rozwiązanie**: Dodano pole `model` do migawki (`$fw/name` z Homie) i rozdzielono
+meta na dwie linie: IP · MAC (linia 1), model · firmware (linia 2).
+
+**Zmienione pliki**:
+
+| Plik | Zmiana |
+|------|--------|
+| `webapp/app/state.py:225` | `_device_snapshot` — nowe pole `"model": attrs.get("$fw/name")` |
+| `webapp/app/static/app.js:123-124,137,185-189` | Dwa elementy `meta1`/`meta2` zamiast jednego `meta`; osobne linie dla IP·MAC i model·firmware |
+| `webapp/app/static/app.js:185-189` | `updateTile` — dwie linie zamiast jednej |
+| `tests/unit/test_state.py:127` | Oczekiwana migawka ma `"model": "mss310"` |
+| `tests/unit/test_state.py:240` | Asercja `device["model"] is None` w teście braku atrybutów |
+| `tests/unit/test_api.py:40` | `snapshot_with()` publikuje `$fw/name` |
+| `CONTRACT.md:154,173` | `"model": "mss310"` w przykładzie + dokumentacja w opisie pól |
+
+**Testy**: 174/174 passed, 1 skipped (bez zmian).

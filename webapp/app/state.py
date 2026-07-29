@@ -221,6 +221,7 @@ class HomieState:
             "state": attrs.get("$state"),
             "mac": attrs.get("$mac"),
             "ip": attrs.get("$localip"),
+            "model": attrs.get("$fw/name"),
             "fw": attrs.get("$fw/version"),
             "channels": self._channels(device),
         }

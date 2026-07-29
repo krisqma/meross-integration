@@ -36,6 +36,7 @@ def snapshot_with(channels=(("switch", True, True),), dev=DEV, state="ready"):
         (f"homie/{dev}/$state", state),
         (f"homie/{dev}/$localip", "192.168.1.122"),
         (f"homie/{dev}/$mac", "48:e1:e9:62:e3:a6"),
+        (f"homie/{dev}/$fw/name", "mss310"),
         (f"homie/{dev}/$fw/version", "6.1.9"),
     ]
     for node, on, settable in channels:
