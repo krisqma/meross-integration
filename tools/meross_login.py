@@ -199,6 +199,45 @@ def region_hint(current: str) -> str:
     return "Spróbuj innego regionu: {0} (np. --api-base-url us).".format(", ".join(others))
 
 
+def ensure_login_response_compat(response_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Uzupełnia pola, których `meross_iot==0.4.6.2` wymaga, a API Meross już nie zwraca.
+
+    Od ~2024 odpowiedź logowania często nie ma `mfaLockExpire`. Biblioteka robi wtedy
+    `response_data["mfaLockExpire"]` → `KeyError`, mimo że logowanie się udało i klucz
+    jest w odpowiedzi. Uzupełniamy brakujące pola przed zbudowaniem `MerossCloudCreds`.
+    """
+    if not isinstance(response_data, dict):
+        return response_data
+    # Token+key = sukces logowania; inne endpointy (list devices) nie potrzebują łaty.
+    if "token" in response_data and "key" in response_data:
+        response_data.setdefault("mfaLockExpire", 0)
+        response_data.setdefault("mqttDomain", response_data.get("mqttDomain") or "mqtt-eu.meross.com")
+        response_data.setdefault("domain", response_data.get("domain") or "https://iotx-eu.meross.com")
+    return response_data
+
+
+def patch_meross_login_compat() -> None:
+    """Owija `_async_authenticated_post`, żeby login nie padał na brakującym mfaLockExpire.
+
+    Idempotentne — kolejne wywołania nie nakładają kolejnych warstw.
+    """
+    from meross_iot.http_api import MerossHttpClient
+
+    if getattr(MerossHttpClient._async_authenticated_post, "_mfa_lock_patched", False):
+        return
+
+    original = MerossHttpClient._async_authenticated_post
+
+    @classmethod
+    async def _patched(cls, *args: Any, **kwargs: Any) -> Any:  # type: ignore[no-untyped-def]
+        raw = getattr(original, "__func__", original)
+        data = await raw(cls, *args, **kwargs)
+        return ensure_login_response_compat(data)
+
+    _patched._mfa_lock_patched = True  # type: ignore[attr-defined]
+    MerossHttpClient._async_authenticated_post = _patched  # type: ignore[method-assign]
+
+
 async def fetch_key_and_devices(
     api_base_url: str, email: str, password: str, mfa_code: Optional[str]
 ) -> Tuple[str, List[Any]]:
@@ -208,6 +247,8 @@ async def fetch_key_and_devices(
     aktywnych tokenów na konto, więc wylogowanie to nie kosmetyka.
     """
     from meross_iot.http_api import MerossHttpClient
+
+    patch_meross_login_compat()
 
     client = await MerossHttpClient.async_from_user_password(
         api_base_url=api_base_url,
@@ -252,8 +293,13 @@ def explain_failure(exc: BaseException, api_base_url: str) -> str:
 
     if isinstance(exc, MissingMFA):
         return (
-            "Konto ma włączone uwierzytelnianie dwuetapowe. Uruchom ponownie z kodem z aplikacji:\n"
-            "  ./dot.sh login --mfa-code 123456"
+            "Konto ma włączone uwierzytelnianie dwuetapowe — potrzebny kod z aplikacji Authenticator.\n"
+            "Uruchom ponownie i podaj kod, albo od razu: ./dot.sh login --mfa-code 123456"
+        )
+    if isinstance(exc, KeyError) and exc.args and exc.args[0] == "mfaLockExpire":
+        return (
+            "Biblioteka meross_iot padła na brakującym polu mfaLockExpire (znany bug API Meross).\n"
+            "Zaktualizuj tools/meross_login.py — powinna być już łata ensure_login_response_compat."
         )
     if isinstance(exc, WrongMFA):
         return "Kod dwuetapowy jest nieprawidłowy albo już wygasł. Weź świeży kod i spróbuj jeszcze raz."
@@ -364,9 +410,29 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("Puste hasło — przerywam.", file=sys.stderr)
         return 2
 
+    mfa_code = args.mfa_code
     print("\nŁączę się z chmurą...")
     try:
-        key, devices = asyncio.run(fetch_key_and_devices(api_base_url, email, password, args.mfa_code))
+        try:
+            key, devices = asyncio.run(fetch_key_and_devices(api_base_url, email, password, mfa_code))
+        except BaseException as first_exc:
+            # Brak MFA w pierwszym strzale — dopytaj i spróbuj jeszcze raz, bez ponownego
+            # wpisywania hasła. (MissingMFA importujemy tu, bo meross_iot jest już dostępne.)
+            from meross_iot.model.http.exception import MissingMFA
+
+            if not isinstance(first_exc, MissingMFA) or mfa_code:
+                raise
+            print("\nKonto wymaga kodu dwuetapowego (MFA).")
+            try:
+                mfa_code = input("Kod z aplikacji Authenticator: ").strip() or None
+            except (EOFError, KeyboardInterrupt):
+                print("\nPrzerwane.", file=sys.stderr)
+                return 2
+            if not mfa_code:
+                print(explain_failure(first_exc, api_base_url), file=sys.stderr)
+                return 1
+            print("Próbuję ponownie z kodem MFA...")
+            key, devices = asyncio.run(fetch_key_and_devices(api_base_url, email, password, mfa_code))
     except KeyboardInterrupt:
         print("\nPrzerwane.", file=sys.stderr)
         return 1
