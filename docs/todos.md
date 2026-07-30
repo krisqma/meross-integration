@@ -91,3 +91,50 @@ meta na dwie linie: IP · MAC (linia 1), model · firmware (linia 2).
 | `CONTRACT.md:154,173` | `"model": "mss310"` w przykładzie + dokumentacja w opisie pól |
 
 **Testy**: 174/174 passed, 1 skipped (bez zmian).
+
+---
+
+## 2026-07-30 21:40
+
+### Nazwy kanałów dla listew wielogniazdkowych z chmury Meross
+
+**Problem**: Listwy z wieloma gniazdami (np. MSS620, MSS425F) pokazywały
+w GUI generyczne nazwy z bridge'a: "Switch", "Switch (channel 1)",
+"Switch (channel 2)" zamiast nazw własnych kanałów zdefiniowanych w aplikacji
+Meross (np. "Lampa", "Monitor").
+
+**Przyczyna**:
+- Bridge (`meross2mqtt/`) generuje nazwy kanałów algorytmicznie
+  (`_channel_name("Switch", channel_id)`), bo protokół LAN nie przenosi
+  nazw per-kanał.
+- Cloud API Meross zwraca per-kanałowe `devName` (np. `"Lampa"`), ale
+  `tools/meross_login.py` brało tylko `len(channels)` i resztę wyrzucało.
+- Webapp przekazywał nazwy bridge'a 1:1.
+
+**Rozwiązanie**:
+- `tools/meross_login.py` — `device_summary()` wyciąga `devName` z każdego
+  kanału i zapisuje jako listę `channel_names` w `cloud-devices.json`.
+- Webapp ładuje cały wpis cloud (nie tylko `name`) i w `_channels()`
+  stosuje priorytet: cloud name → bridge name → fallback `"Gniazdo N"`.
+
+**Zmienione pliki**:
+
+| Plik | Zmiana |
+|------|--------|
+| `tools/meross_login.py:126-147` | `device_summary()` — wyciąga `devName` z cloud API, dodaje `channel_names` |
+| `webapp/app/main.py:37-48` | `_load_cloud_names()` → `_load_cloud_devices()`, zwraca pełny dict per UUID |
+| `webapp/app/mqtt.py:44,51` | Parametr `cloud_names` → `cloud_devices` w `MqttHub.__init__` |
+| `webapp/app/state.py:100,220,230-245` | `HomieState.__init__` przyjmuje `cloud_devices`; `_channels()` używa cloud names z priorytetem |
+| `tests/unit/test_state.py:175-183` | Nowy test: `test_cloud_channel_names_nadpisuja_bridge_name` |
+| `CONTRACT.md:159` | Dokumentacja: `channels[].name` może pochodzić z chmury |
+
+**Priorytet nazwy kanału**:
+1. Cloud name (`cloud-devices.json` → `channel_names[N]`)
+2. Bridge name (`node.attrs.get("$name")`)
+3. Fallback (`f"Gniazdo {channel + 1}"`)
+
+**Testy**: 175/175 passed, 1 skipped.
+
+**Użycie**:
+1. `./dot.sh login` — zaktualizuje `cloud-devices.json` o `channel_names`
+2. `./dot.sh restart` — webapp wczyta nazwy kanałów z chmury
