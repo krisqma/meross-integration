@@ -156,7 +156,7 @@ decyzja: panel siedzi w LAN-ie, broker tylko na loopbacku).
       "channels": [
         {
           "node": "switch",
-          "name": "Switch",
+          "name": "Switch (lub nazwa z chmury Meross — devName)",
           "on": true,
           "settable": true,
           "power_w": 41.2,

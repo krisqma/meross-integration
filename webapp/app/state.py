@@ -97,10 +97,10 @@ class Device:
 class HomieState:
     """Akumuluje stan z tematów Homie i wystawia go w kształcie z kontraktu."""
 
-    def __init__(self, prefix: str = "homie", cloud_names: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self, prefix: str = "homie", cloud_devices: Optional[Dict[str, dict]] = None) -> None:
         self.prefix = prefix
         self.devices: Dict[str, Device] = {}
-        self._cloud_names: Dict[str, str] = cloud_names or {}
+        self._cloud_devices: Dict[str, dict] = cloud_devices or {}
 
     # ------------------------------------------------------------------ wejście
 
@@ -215,18 +215,20 @@ class HomieState:
     def _device_snapshot(self, dev_id: str) -> dict:
         device = self.devices[dev_id]
         attrs = device.attrs
+        cloud = self._cloud_devices.get(dev_id, {})
         return {
             "id": dev_id,
-            "name": self._cloud_names.get(dev_id) or attrs.get("$name"),
+            "name": cloud.get("name") or attrs.get("$name"),
             "state": attrs.get("$state"),
             "mac": attrs.get("$mac"),
             "ip": attrs.get("$localip"),
             "model": attrs.get("$fw/name"),
             "fw": attrs.get("$fw/version"),
-            "channels": self._channels(device),
+            "channels": self._channels(device, dev_id),
         }
 
-    def _channels(self, device: Device) -> List[dict]:
+    def _channels(self, device: Device, dev_id: str) -> List[dict]:
+        cloud_ch_names = self._cloud_devices.get(dev_id, {}).get("channel_names") or []
         channels: List[Tuple[int, dict]] = []
         for node_name, node in device.nodes.items():
             base, channel = split_channel(node_name)
@@ -235,12 +237,16 @@ class HomieState:
             energy = device.nodes.get(channel_node("energy", channel))
             electricity = device.nodes.get(channel_node("electricity", channel))
             settable = _parse_bool(node.prop_attr("power", "$settable"))
+
+            cloud_name = cloud_ch_names[channel] if channel < len(cloud_ch_names) and cloud_ch_names[channel] else None
+            channel_name = cloud_name or node.attrs.get("$name") or f"Gniazdo {channel + 1}"
+
             channels.append(
                 (
                     channel,
                     {
                         "node": node_name,
-                        "name": node.attrs.get("$name"),
+                        "name": channel_name,
                         "on": _parse_bool(node.value("power")),
                         "settable": DEFAULT_SETTABLE if settable is None else settable,
                         "power_w": _parse_float(electricity.value("power")) if electricity else None,

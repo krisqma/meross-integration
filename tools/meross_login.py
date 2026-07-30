@@ -127,6 +127,13 @@ def device_summary(device: Any) -> Dict[str, Any]:
     """Wyciąga z `HttpDeviceInfo` tylko to, co nam potrzebne (i nic wrażliwego)."""
     channels = getattr(device, "channels", None)
     online = getattr(device, "online_status", None)
+
+    channel_names = None
+    if isinstance(channels, list):
+        names = [ch.get("devName") if isinstance(ch, dict) else None for ch in channels]
+        if any(names):
+            channel_names = names
+
     entry = {
         "name": getattr(device, "dev_name", None),
         "type": getattr(device, "device_type", None),
@@ -136,6 +143,8 @@ def device_summary(device: Any) -> Dict[str, Any]:
         "channels": len(channels) if isinstance(channels, list) else None,
         "online": getattr(online, "name", None) if online is not None else None,
     }
+    if channel_names is not None:
+        entry["channel_names"] = channel_names
     return {name: value for name, value in entry.items() if value is not None}
 
 
