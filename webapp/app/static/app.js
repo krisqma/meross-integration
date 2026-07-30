@@ -120,9 +120,10 @@ function buildTile(device, signature) {
   const state = el("span", "badge");
   head.append(name, state);
 
-  const meta = el("p", "muted device-meta", "");
+  const meta1 = el("p", "muted device-meta", "");
+  const meta2 = el("p", "muted device-meta", "");
 
-  root.append(head, meta);
+  root.append(head, meta1, meta2);
 
   const channels = new Map();
   for (const channel of device.channels) {
@@ -134,7 +135,7 @@ function buildTile(device, signature) {
     root.append(el("p", "muted", "Urządzenie nie zgłosiło żadnego gniazda."));
   }
 
-  return { root, signature, name, state, meta, channels };
+  return { root, signature, name, state, meta1, meta2, channels };
 }
 
 function updateChannel(devId, refs, channel) {
@@ -182,10 +183,10 @@ function updateTile(tile, device) {
   setBadge(tile.state, label.text, label.cls);
   tile.root.classList.toggle("offline", isOffline(device.state));
 
-  const meta = [device.ip, device.mac, device.fw ? `firmware ${device.fw}` : null]
-    .filter(Boolean)
-    .join(" · ");
-  tile.meta.textContent = meta || device.id;
+  const line1 = [device.ip, device.mac].filter(Boolean).join(" · ");
+  const line2 = [device.model, device.fw ? `firmware ${device.fw}` : null].filter(Boolean).join(" · ");
+  tile.meta1.textContent = line1 || device.id;
+  tile.meta2.textContent = line2 || "";
 
   for (const channel of device.channels) {
     const refs = tile.channels.get(channel.node);

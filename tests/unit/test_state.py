@@ -123,6 +123,7 @@ def test_pelny_kafelek_jednokanalowy_zgodny_z_kontraktem():
                 "state": "ready",
                 "mac": "48:e1:e9:62:e3:a6",
                 "ip": "192.168.1.122",
+                "model": "mss310",
                 "fw": "6.1.9",
                 "channels": [
                     {
@@ -178,6 +179,15 @@ def test_kanaly_sortuja_sie_numerycznie_a_nie_leksykalnie():
         events += switch_node(channel=channel)
     channels = parse(events).snapshot()["devices"][0]["channels"]
     assert [c["node"] for c in channels] == ["switch", "switch-2", "switch-10"]
+
+
+def test_cloud_channel_names_nadpisuja_bridge_name():
+    events = device_attrs(nodes="switch,switch-1") + switch_node(channel=0) + switch_node(channel=1)
+    cloud = {DEV: {"name": "Biurko", "channel_names": ["Lampa", "Monitor"]}}
+    state = HomieState(cloud_devices=cloud)
+    state.ingest_many(events)
+    channels = state.snapshot()["devices"][0]["channels"]
+    assert [c["name"] for c in channels] == ["Lampa", "Monitor"]
 
 
 def test_split_channel_nie_lapie_nazw_ktore_tylko_wygladaja_jak_kanal():
@@ -237,6 +247,7 @@ def test_brak_atrybutow_urzadzenia_daje_none_a_nie_wyjatek():
     assert device["state"] is None
     assert device["mac"] is None
     assert device["ip"] is None
+    assert device["model"] is None
     assert device["fw"] is None
 
 
