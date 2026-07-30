@@ -40,6 +40,7 @@ browser ──REST+SSE──> webapp ──homie/#──> mosquitto <──homie
 
 - **`meross2mqtt/`** — cloned fork of `depau/meross2mqtt`, **never modify** (must stay `git pull`-able). In `.gitignore`. Auto-cloned by `./dot.sh up`.
 - **`bridge/config/`** — `config.yml` (generated from `config.yml.tmpl`, **do not edit**), `devices.json` (from `discover` + bridge runtime).
+- **`data/cloud-devices.json`** — cloud dump from `./dot.sh login`. Contains device names **and per-channel names** for power strips (`channel_names[]`). Auto-copied from `bridge/config/` by login.
 - **`webapp/`** — FastAPI + APScheduler + vanilla JS frontend (no build step).
 - **`CONTRACT.md`** — frozen interface spec (MQTT topics, REST API, DB schema, ENV vars). Source of truth for all integration points.
 
@@ -56,6 +57,7 @@ browser ──REST+SSE──> webapp ──homie/#──> mosquitto <──homie
 - **SQLite is source of truth** for schedules. APScheduler jobs are rebuilt from DB on every webapp start.
 - **Timezone** is `Europe/Warsaw` (from `.env` `TZ`). Critical for cron schedules around DST changes.
 - **`dot.sh` targets bash 3.2** (macOS default). No associative arrays, no `${var,,}`.
+- **Channel names for power strips**: Bridge publishes generic `"Switch (channel N)"` per channel (LAN protocol has no per-channel names). Webapp overrides these with cloud names from `cloud-devices.json` (`channel_names[]`). After renaming outlets in Meross app, refresh via `./dot.sh login && ./dot.sh restart`.
 
 ## ENV (from `.env.example`)
 
